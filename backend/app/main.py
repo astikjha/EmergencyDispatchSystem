@@ -1,5 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.database import engine, Base
+from app.models import db_models  # this import registers the models with Base
+
+# Creates all tables in PostgreSQL if they don't exist yet
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Emergency Dispatch System",
