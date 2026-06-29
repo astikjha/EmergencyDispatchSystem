@@ -11,9 +11,10 @@ service = DispatchService()
 def create_emergency(data: EmergencyCreate, db: Session = Depends(get_db)):
     return service.create_emergency(db, data)
 
+# Changed to async because dispatch_emergency now broadcasts via WebSocket
 @router.post("/{emergency_id}/dispatch")
-def dispatch_emergency(emergency_id: str, db: Session = Depends(get_db)):
-    result = service.dispatch_emergency(db, emergency_id)
+async def dispatch_emergency(emergency_id: str, db: Session = Depends(get_db)):
+    result = await service.dispatch_emergency(db, emergency_id)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result

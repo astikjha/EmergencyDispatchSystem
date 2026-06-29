@@ -6,6 +6,7 @@ from app.core.entities import Ambulance, Hospital, Patient, EmergencyRequest
 from app.core.entities import SeverityLevel as EntitySeverity
 from app.core.route_planner import RoutePlanner
 import uuid
+from app.core.websocket_manager import manager
 
 
 # RoutePlanner is expensive to initialize — create it once here
@@ -101,7 +102,7 @@ class DispatchService:
         db.refresh(emergency)
         return emergency
 
-    def dispatch_emergency(self, db: Session, emergency_id: str) -> dict:
+    async def dispatch_emergency(self, db: Session, emergency_id: str) -> dict:
         # Step 1 — Load emergency from DB
         emergency = db.query(EmergencyModel).filter(EmergencyModel.id == emergency_id).first()
         if not emergency:
@@ -123,12 +124,11 @@ class DispatchService:
         if not available_hospitals:
             return {"error": "No hospitals with capacity"}
 
-        # Step 4 — Convert DB models to OOP entities for route planning
+        # Step 4 — Convert DB models to OOP entities
         patient_entity = Patient(
             patient_db.name, patient_db.age,
             patient_db.symptoms, patient_db.latitude, patient_db.longitude
         )
-
         ambulance_entities = [
             Ambulance(a.vehicle_number, a.driver_name, a.latitude, a.longitude)
             for a in available_ambulances
@@ -138,14 +138,14 @@ class DispatchService:
             for h in available_hospitals
         ]
 
-        # Step 5 — Use RoutePlanner (Dijkstra) to find nearest ambulance and hospital
+        # Step 5 — Find nearest ambulance and hospital
         nearest_ambulance_entity, _ = route_planner.find_nearest_ambulance(patient_entity, ambulance_entities)
         nearest_hospital_entity, _ = route_planner.find_nearest_hospital(patient_entity, hospital_entities)
 
-        # Step 6 — Calculate full route and ETA
+        # Step 6 — Calculate route
         route = route_planner.plan_route(nearest_ambulance_entity, patient_entity, nearest_hospital_entity)
 
-        # Step 7 — Find corresponding DB records
+        # Step 7 — Find DB records
         nearest_ambulance_db = next(
             a for a in available_ambulances
             if a.vehicle_number == nearest_ambulance_entity.vehicle_number
@@ -160,19 +160,22 @@ class DispatchService:
         emergency.ambulance_id = nearest_ambulance_db.id
         emergency.hospital_id = nearest_hospital_db.id
         emergency.eta_minutes = route["eta_minutes"]
-
         nearest_ambulance_db.status = AmbulanceStatus.busy
         nearest_hospital_db.available_beds -= 1
-
         db.commit()
 
-        return {
+        result = {
             "emergency_id": emergency.id,
             "status": "dispatched",
             "ambulance": nearest_ambulance_db.vehicle_number,
             "hospital": nearest_hospital_db.name,
             "route": route
         }
+
+        # Step 9 — Broadcast to all connected WebSocket clients
+        await manager.broadcast("emergency_dispatched", result)
+
+        return result
 
     def get_all_emergencies(self, db: Session) -> list[EmergencyModel]:
         return db.query(EmergencyModel).all()
