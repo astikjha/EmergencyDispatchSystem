@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
-from app.models import db_models  # this import registers the models with Base
+from app.models import db_models
+from app.routes import ambulance, hospital, emergency
 
-# Creates all tables in PostgreSQL if they don't exist yet
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -18,6 +18,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register all routers
+app.include_router(ambulance.router)
+app.include_router(hospital.router)
+app.include_router(emergency.router)
 
 @app.get("/")
 def root():
