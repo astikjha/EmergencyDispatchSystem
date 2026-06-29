@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
 from app.models import db_models
-from app.routes import ambulance, hospital, emergency, ws
+from app.routes import ambulance, hospital, emergency, ws, ml
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,6 +23,7 @@ app.include_router(ambulance.router)
 app.include_router(hospital.router)
 app.include_router(emergency.router)
 app.include_router(ws.router)
+app.include_router(ml.router)
 
 @app.get("/")
 def root():

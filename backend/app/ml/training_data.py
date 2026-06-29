@@ -1,0 +1,73 @@
+# Each entry is (symptoms, emergency_type, severity)
+# severity: 0=low, 1=medium, 2=high, 3=critical
+# This is our labeled dataset that the model learns from
+
+TRAINING_DATA = [
+    # Critical cases
+    ("not breathing unconscious no pulse", "cardiac_arrest", 3),
+    ("cardiac arrest heart stopped", "cardiac_arrest", 3),
+    ("severe stroke unable to speak paralyzed", "stroke", 3),
+    ("massive internal bleeding unconscious", "trauma", 3),
+    ("severe head injury unconscious bleeding", "trauma", 3),
+    ("anaphylactic shock difficulty breathing swelling", "allergic_reaction", 3),
+    ("choking unable to breathe turning blue", "choking", 3),
+    ("drowning unconscious not breathing", "drowning", 3),
+    ("severe burns over entire body", "burns", 3),
+    ("uncontrolled seizure not stopping", "seizure", 3),
+    ("heart attack chest pain radiating arm", "cardiac", 3),
+    ("sudden collapse unconscious no response", "cardiac", 3),
+    ("severe allergic reaction throat closing", "allergic_reaction", 3),
+    ("gunshot wound to chest bleeding heavily", "trauma", 3),
+    ("stabbing wound deep bleeding profusely", "trauma", 3),
+
+    # High cases
+    ("chest pain shortness of breath sweating", "cardiac", 2),
+    ("severe abdominal pain vomiting blood", "abdominal", 2),
+    ("broken bone visible fracture severe pain", "fracture", 2),
+    ("deep cut bleeding heavily needs stitches", "laceration", 2),
+    ("high fever 104 degrees seizure risk", "fever", 2),
+    ("severe asthma attack cannot breathe", "respiratory", 2),
+    ("diabetic emergency low blood sugar unconscious", "diabetic", 2),
+    ("severe allergic reaction hives difficulty breathing", "allergic_reaction", 2),
+    ("accident multiple injuries bleeding", "accident", 2),
+    ("fall from height back pain cannot move", "trauma", 2),
+    ("severe burn on hands and arms", "burns", 2),
+    ("pregnancy complications heavy bleeding", "obstetric", 2),
+    ("severe mental health crisis self harm", "psychiatric", 2),
+    ("electric shock injury burns", "electric", 2),
+    ("poisoning ingested chemicals vomiting", "poisoning", 2),
+
+    # Medium cases
+    ("moderate fever headache body ache", "fever", 1),
+    ("sprained ankle swelling moderate pain", "injury", 1),
+    ("vomiting diarrhea dehydration", "gastro", 1),
+    ("mild chest pain no shortness of breath", "cardiac", 1),
+    ("cut bleeding moderate needs cleaning", "laceration", 1),
+    ("back pain unable to walk properly", "musculoskeletal", 1),
+    ("mild allergic reaction rash itching", "allergic_reaction", 1),
+    ("urinary tract infection severe pain", "infection", 1),
+    ("ear pain severe infection", "infection", 1),
+    ("tooth pain severe swelling", "dental", 1),
+    ("eye injury moderate pain blurred vision", "eye", 1),
+    ("mild breathing difficulty asthma", "respiratory", 1),
+    ("anxiety attack hyperventilating", "psychiatric", 1),
+    ("nosebleed heavy not stopping", "ent", 1),
+    ("knee injury swelling cannot bend", "injury", 1),
+
+    # Low cases
+    ("mild headache slight fever", "fever", 0),
+    ("minor cut small bleeding", "laceration", 0),
+    ("mild stomach ache nausea", "gastro", 0),
+    ("sore throat mild cough", "respiratory", 0),
+    ("minor bruise slight pain", "injury", 0),
+    ("mild back pain discomfort", "musculoskeletal", 0),
+    ("slight dizziness feeling faint", "general", 0),
+    ("mild rash no breathing issues", "skin", 0),
+    ("minor burn small area redness", "burns", 0),
+    ("mild anxiety stress", "psychiatric", 0),
+    ("common cold runny nose", "respiratory", 0),
+    ("mild muscle cramp", "musculoskeletal", 0),
+    ("minor eye irritation", "eye", 0),
+    ("mild indigestion heartburn", "gastro", 0),
+    ("slight fever 99 degrees fatigue", "fever", 0),
+]

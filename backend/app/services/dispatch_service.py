@@ -14,21 +14,18 @@ route_planner = RoutePlanner()
 
 # Simple rule-based severity assignment
 # Our ML model will replace this on Day 9
+from app.ml.severity_classifier import classifier
+
 def assign_severity(symptoms: str, emergency_type: str) -> SeverityLevel:
-    critical_keywords = ["cardiac", "heart attack", "unconscious", "not breathing", "stroke"]
-    high_keywords = ["chest pain", "bleeding", "fracture", "accident"]
-    medium_keywords = ["fever", "vomiting", "pain", "injury"]
-
-    text = (symptoms + " " + emergency_type).lower()
-
-    if any(k in text for k in critical_keywords):
-        return SeverityLevel.critical
-    elif any(k in text for k in high_keywords):
-        return SeverityLevel.high
-    elif any(k in text for k in medium_keywords):
-        return SeverityLevel.medium
-    else:
-        return SeverityLevel.low
+    # Now uses Random Forest ML model instead of keyword matching
+    prediction = classifier.predict(symptoms, emergency_type)
+    severity_map = {
+        "critical": SeverityLevel.critical,
+        "high": SeverityLevel.high,
+        "medium": SeverityLevel.medium,
+        "low": SeverityLevel.low,
+    }
+    return severity_map[prediction]
 
 
 class DispatchService:
