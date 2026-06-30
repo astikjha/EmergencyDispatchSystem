@@ -51,6 +51,29 @@ class DispatchService:
     def get_ambulance(self, db: Session, ambulance_id: str) -> AmbulanceModel:
         return db.query(AmbulanceModel).filter(AmbulanceModel.id == ambulance_id).first()
 
+    async def update_ambulance_location(self, db: Session, ambulance_id: str, latitude: float, longitude: float) -> dict:
+        # Find ambulance in database
+        ambulance = db.query(AmbulanceModel).filter(AmbulanceModel.id == ambulance_id).first()
+        if not ambulance:
+            return {"error": "Ambulance not found"}
+
+        # Update coordinates
+        ambulance.latitude = latitude
+        ambulance.longitude = longitude
+        db.commit()
+
+        # Broadcast new location to all connected clients
+        location_update = {
+            "ambulance_id": ambulance_id,
+            "vehicle_number": ambulance.vehicle_number,
+            "latitude": latitude,
+            "longitude": longitude,
+            "status": ambulance.status.value
+        }
+        await manager.broadcast("ambulance_location_update", location_update)
+
+        return location_update
+
     # ── Hospital operations ────────────────────────────────
     def create_hospital(self, db: Session, data: HospitalCreate) -> HospitalModel:
         hospital = HospitalModel(
@@ -179,3 +202,4 @@ class DispatchService:
 
     def get_emergency(self, db: Session, emergency_id: str) -> EmergencyModel:
         return db.query(EmergencyModel).filter(EmergencyModel.id == emergency_id).first()
+    

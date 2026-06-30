@@ -21,3 +21,16 @@ def get_ambulance(ambulance_id: str, db: Session = Depends(get_db)):
     if not ambulance:
         raise HTTPException(status_code=404, detail="Ambulance not found")
     return ambulance
+
+from pydantic import BaseModel
+
+class LocationUpdate(BaseModel):
+    latitude: float
+    longitude: float
+
+@router.put("/{ambulance_id}/location")
+async def update_location(ambulance_id: str, data: LocationUpdate, db: Session = Depends(get_db)):
+    result = await service.update_ambulance_location(db, ambulance_id, data.latitude, data.longitude)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
