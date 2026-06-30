@@ -29,3 +29,10 @@ def get_emergency(emergency_id: str, db: Session = Depends(get_db)):
     if not emergency:
         raise HTTPException(status_code=404, detail="Emergency not found")
     return emergency
+
+@router.post("/{emergency_id}/complete")
+async def complete_emergency(emergency_id: str, db: Session = Depends(get_db)):
+    result = await service.complete_emergency(db, emergency_id)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result

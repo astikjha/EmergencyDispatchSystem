@@ -197,6 +197,34 @@ class DispatchService:
 
         return result
 
+    async def complete_emergency(self, db: Session, emergency_id: str) -> dict:
+        emergency = db.query(EmergencyModel).filter(EmergencyModel.id == emergency_id).first()
+        if not emergency:
+            return {"error": "Emergency not found"}
+
+        # Free up the ambulance
+        if emergency.ambulance_id:
+            ambulance = db.query(AmbulanceModel).filter(AmbulanceModel.id == emergency.ambulance_id).first()
+            if ambulance:
+                ambulance.status = AmbulanceStatus.available
+
+        # Free up the hospital bed
+        if emergency.hospital_id:
+            hospital = db.query(HospitalModel).filter(HospitalModel.id == emergency.hospital_id).first()
+            if hospital:
+                hospital.available_beds += 1
+
+        emergency.status = EmergencyStatus.completed
+        db.commit()
+
+        result = {
+            "emergency_id": emergency.id,
+            "status": "completed"
+        }
+
+        await manager.broadcast("emergency_completed", result)
+        return result
+
     def get_all_emergencies(self, db: Session) -> list[EmergencyModel]:
         return db.query(EmergencyModel).all()
 
