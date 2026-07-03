@@ -6,12 +6,4 @@ services:
     dockerContext: ./backend
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: emergency-dispatch-db
-          property: connectionString
-
-databases:
-  - name: emergency-dispatch-db
-    plan: free
-    databaseName: emergency_dispatch
-    user: dispatch_user
+        value: postgresql://postgres:Pratikjha2008%40@db.vjenmniqwshsqeotrhyb.supabase.co:5432/postgres
