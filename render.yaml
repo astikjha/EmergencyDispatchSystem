@@ -14,4 +14,4 @@ databases:
   - name: emergency-dispatch-db
     plan: free
     databaseName: emergency_dispatch
-    user: postgres
+    user: dispatch_user
