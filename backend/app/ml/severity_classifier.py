@@ -7,6 +7,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from app.ml.training_data import TRAINING_DATA
+from sklearn.model_selection import cross_val_score
+
 
 
 class SeverityClassifier:
@@ -47,6 +49,10 @@ class SeverityClassifier:
                 max_depth=10       # prevents overfitting
             ))
         ])
+
+        # Cross-validation first — honest accuracy estimate
+        cv_scores = cross_val_score(self.model, texts, labels, cv=5, scoring="accuracy")
+        print(f"\n=== Cross-Validation Accuracy: {cv_scores.mean():.2%} (+/- {cv_scores.std():.2%}) ===")
 
         # Split data: 80% for training, 20% for testing accuracy
         X_train, X_test, y_train, y_test = train_test_split(
