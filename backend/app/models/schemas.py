@@ -86,3 +86,55 @@ class EmergencyResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+    # ── Auth schemas ───────────────────────────────────────────
+class PatientRegister(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    age: int
+    symptoms: Optional[str] = ""
+    latitude: float
+    longitude: float
+
+class HospitalRegister(BaseModel):
+    email: str
+    password: str
+    full_name: str  # hospital name
+    latitude: float
+    longitude: float
+    total_beds: int
+
+class DriverRegister(BaseModel):
+    email: str
+    password: str
+    full_name: str  # driver name
+    vehicle_number: str
+    latitude: float
+    longitude: float
+
+class AdminRegister(BaseModel):
+    email: str
+    password: str
+    full_name: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    role: str
+    user_id: str
+    full_name: str
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    role: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True

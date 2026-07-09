@@ -4,6 +4,7 @@ from sqlalchemy import ForeignKey
 from app.core.database import Base
 from datetime import datetime
 import enum
+from sqlalchemy import Column, String, Float, Integer, DateTime, Enum as SQLEnum, Boolean
 
 
 class AmbulanceStatus(enum.Enum):
@@ -79,6 +80,35 @@ class EmergencyModel(Base):
     hospital_id = Column(String, ForeignKey("hospitals.id"), nullable=True)
 
     # Relationships — lets us access related objects directly
+    patient = relationship("PatientModel", foreign_keys=[patient_id])
+    ambulance = relationship("AmbulanceModel", foreign_keys=[ambulance_id])
+    hospital = relationship("HospitalModel", foreign_keys=[hospital_id])
+
+
+class UserRole(enum.Enum):
+    patient = "patient"
+    hospital = "hospital"
+    driver = "driver"
+    admin = "admin"
+
+
+class UserModel(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True)
+    email = Column(String, unique=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role = Column(SQLEnum(UserRole), nullable=False)
+    full_name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
+    is_active = Column(Boolean, default=True)
+
+    # Optional links to related entities
+    # Only one of these will be set depending on role
+    patient_id = Column(String, ForeignKey("patients.id"), nullable=True)
+    ambulance_id = Column(String, ForeignKey("ambulances.id"), nullable=True)
+    hospital_id = Column(String, ForeignKey("hospitals.id"), nullable=True)
+
     patient = relationship("PatientModel", foreign_keys=[patient_id])
     ambulance = relationship("AmbulanceModel", foreign_keys=[ambulance_id])
     hospital = relationship("HospitalModel", foreign_keys=[hospital_id])

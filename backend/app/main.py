@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
 from app.models import db_models
-from app.routes import ambulance, hospital, emergency, ws, ml
+from app.routes import ambulance, hospital, emergency, ws, ml, auth
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,6 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(ambulance.router)
 app.include_router(hospital.router)
 app.include_router(emergency.router)
