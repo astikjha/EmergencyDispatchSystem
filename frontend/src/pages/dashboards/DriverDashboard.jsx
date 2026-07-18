@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import api from "../../api/api";
 import Navbar from "../../components/Navbar";
+import EmergencyMap from "../../components/EmergencyMap";
 
 function DriverDashboard() {
   const [ambulanceInfo, setAmbulanceInfo] = useState(null);
@@ -222,6 +223,23 @@ function DriverDashboard() {
                   {assignedEmergency.eta_minutes} minutes
                 </p>
               </div>
+            )}
+
+            {assignedEmergency && (
+                <button
+                    onClick={async () => {
+                    try {
+                        await api.post(`/emergencies/${assignedEmergency.id}/complete`);
+                        stopSharing();
+                        fetchData();
+                    } catch (err) {
+                        alert("Failed to complete emergency");
+                    }
+                    }}
+                    className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-colors"
+                >
+                    ✅ Mark as Delivered to Hospital
+                </button>
             )}
 
             <div className="bg-slate-700 rounded-lg p-3">

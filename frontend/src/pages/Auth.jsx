@@ -2,13 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import { saveAuth } from "../auth/authUtils";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 function Auth() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("login"); // "login" or "register"
+  const [tab, setTab] = useState("login");
   const [role, setRole] = useState("patient");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [detectedLocation, setDetectedLocation] = useState(null);
 
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({
@@ -31,6 +35,22 @@ function Auth() {
     setRegisterData({ ...registerData, [e.target.name]: e.target.value });
   };
 
+  const detectLocation = (callback) => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          callback(
+            pos.coords.latitude.toFixed(6),
+            pos.coords.longitude.toFixed(6)
+          );
+        },
+        () => alert("Could not detect location. Please enter manually.")
+      );
+    } else {
+      alert("Geolocation not supported by your browser.");
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -38,7 +58,43 @@ function Auth() {
     try {
       const res = await api.post("/auth/login", loginData);
       saveAuth(res.data);
-      // Redirect based on role
+
+      // Update patient location if GPS was pre-detected
+      if (res.data.role === "patient" && detectedLocation) {
+        try {
+          await api.post(
+            "/auth/update-location",
+            detectedLocation,
+            { headers: { Authorization: `Bearer ${res.data.access_token}` } }
+          );
+        } catch (err) {
+          console.log("Location update skipped");
+        }
+      }
+
+      // If patient and no pre-detected location, try to get it now
+      if (res.data.role === "patient" && !detectedLocation) {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              try {
+                await api.post(
+                  "/auth/update-location",
+                  {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                  },
+                  { headers: { Authorization: `Bearer ${res.data.access_token}` } }
+                );
+              } catch (err) {
+                console.log("Location update skipped");
+              }
+            },
+            () => console.log("Location permission denied")
+          );
+        }
+      }
+
       navigate(`/dashboard/${res.data.role}`);
     } catch (err) {
       setError(err.response?.data?.detail || "Login failed");
@@ -51,7 +107,6 @@ function Auth() {
     setLoading(true);
     setError("");
     try {
-      // Build payload based on selected role
       let payload = {
         email: registerData.email,
         password: registerData.password,
@@ -92,10 +147,92 @@ function Auth() {
     setLoading(false);
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center"
-      style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)" }}>
+  const LocationFields = () => (
+    <div>
+        <div className="flex justify-between items-center mb-2">
+        <label className="text-slate-400 text-sm">Location</label>
+        <button
+            type="button"
+            onClick={() =>
+            detectLocation((lat, lng) =>
+                setRegisterData({ ...registerData, latitude: lat, longitude: lng })
+            )
+            }
+            className="text-xs bg-slate-600 hover:bg-slate-500 text-slate-300 px-3 py-1 rounded-lg transition-colors"
+        >
+            📍 Auto Detect
+        </button>
+        </div>
 
+        {/* Click on map to set location */}
+        <div className="rounded-lg overflow-hidden mb-2" style={{ height: "180px" }}>
+        <MapContainer
+            center={[25.5941, 85.1376]}
+            zoom={12}
+            style={{ height: "100%", width: "100%" }}
+        >
+            <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <LocationPicker
+            onSelect={(lat, lng) =>
+                setRegisterData({ ...registerData, latitude: lat, longitude: lng })
+            }
+            />
+            {registerData.latitude && registerData.longitude && (
+            <Marker
+                position={[
+                parseFloat(registerData.latitude),
+                parseFloat(registerData.longitude),
+                ]}
+            />
+            )}
+        </MapContainer>
+        </div>
+
+        <p className="text-slate-500 text-xs mb-2">
+        Click on the map to set your location, or use Auto Detect
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+        <input
+            type="number"
+            step="any"
+            name="latitude"
+            value={registerData.latitude}
+            onChange={handleRegisterChange}
+            required
+            placeholder="Latitude"
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
+        />
+        <input
+            type="number"
+            step="any"
+            name="longitude"
+            value={registerData.longitude}
+            onChange={handleRegisterChange}
+            required
+            placeholder="Longitude"
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
+        />
+        </div>
+    </div>
+ );
+
+  function LocationPicker({ onSelect }) {
+    useMapEvents({
+        click(e) {
+        onSelect(e.latlng.lat.toFixed(6), e.latlng.lng.toFixed(6));
+        },
+    });
+    return null;
+  }
+
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)" }}
+    >
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -108,15 +245,12 @@ function Auth() {
 
         {/* Card */}
         <div className="bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
-
           {/* Tabs */}
           <div className="flex">
             <button
               onClick={() => { setTab("login"); setError(""); }}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
-                tab === "login"
-                  ? "bg-red-600 text-white"
-                  : "bg-slate-700 text-slate-400 hover:text-white"
+                tab === "login" ? "bg-red-600 text-white" : "bg-slate-700 text-slate-400 hover:text-white"
               }`}
             >
               Login
@@ -124,9 +258,7 @@ function Auth() {
             <button
               onClick={() => { setTab("register"); setError(""); }}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
-                tab === "register"
-                  ? "bg-red-600 text-white"
-                  : "bg-slate-700 text-slate-400 hover:text-white"
+                tab === "register" ? "bg-red-600 text-white" : "bg-slate-700 text-slate-400 hover:text-white"
               }`}
             >
               Register
@@ -180,7 +312,6 @@ function Auth() {
             {/* Register Form */}
             {tab === "register" && (
               <form onSubmit={handleRegister} className="space-y-4">
-                {/* Role selector */}
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">Register as</label>
                   <select
@@ -194,7 +325,6 @@ function Auth() {
                   </select>
                 </div>
 
-                {/* Common fields */}
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">
                     {role === "hospital" ? "Hospital Name" : "Full Name"}
@@ -208,6 +338,7 @@ function Auth() {
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">Email</label>
                   <input
@@ -219,6 +350,7 @@ function Auth() {
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">Password</label>
                   <input
@@ -231,7 +363,7 @@ function Auth() {
                   />
                 </div>
 
-                {/* Patient specific fields */}
+                {/* Patient specific */}
                 {role === "patient" && (
                   <>
                     <div>
@@ -245,38 +377,11 @@ function Auth() {
                         className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1">Latitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          name="latitude"
-                          value={registerData.latitude}
-                          onChange={handleRegisterChange}
-                          required
-                          placeholder="25.5941"
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1">Longitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          name="longitude"
-                          value={registerData.longitude}
-                          onChange={handleRegisterChange}
-                          required
-                          placeholder="85.1300"
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                        />
-                      </div>
-                    </div>
+                    <LocationFields />
                   </>
                 )}
 
-                {/* Hospital specific fields */}
+                {/* Hospital specific */}
                 {role === "hospital" && (
                   <>
                     <div>
@@ -290,36 +395,11 @@ function Auth() {
                         className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1">Latitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          name="latitude"
-                          value={registerData.latitude}
-                          onChange={handleRegisterChange}
-                          required
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1">Longitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          name="longitude"
-                          value={registerData.longitude}
-                          onChange={handleRegisterChange}
-                          required
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                        />
-                      </div>
-                    </div>
+                    <LocationFields />
                   </>
                 )}
 
-                {/* Driver specific fields */}
+                {/* Driver specific */}
                 {role === "driver" && (
                   <>
                     <div>
@@ -331,35 +411,10 @@ function Auth() {
                         onChange={handleRegisterChange}
                         required
                         placeholder="AMB-001"
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1">Latitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          name="latitude"
-                          value={registerData.latitude}
-                          onChange={handleRegisterChange}
-                          required
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1">Longitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          name="longitude"
-                          value={registerData.longitude}
-                          onChange={handleRegisterChange}
-                          required
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                        />
-                      </div>
-                    </div>
+                    <LocationFields />
                   </>
                 )}
 

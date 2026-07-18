@@ -135,6 +135,11 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     is_active: bool
+    patient_id: Optional[str] = None
+    hospital_id: Optional[str] = None
+    ambulance_id: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     class Config:
         from_attributes = True

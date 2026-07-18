@@ -123,21 +123,22 @@ class DispatchService:
         return emergency
 
     async def dispatch_emergency(self, db: Session, emergency_id: str) -> dict:
-        # Step 1 — Load emergency from DB
         emergency = db.query(EmergencyModel).filter(EmergencyModel.id == emergency_id).first()
         if not emergency:
             return {"error": "Emergency not found"}
 
-        # Step 2 — Load patient
         patient_db = db.query(PatientModel).filter(PatientModel.id == emergency.patient_id).first()
 
-        # Step 3 — Find available ambulances and hospitals
         available_ambulances = db.query(AmbulanceModel).filter(
             AmbulanceModel.status == AmbulanceStatus.available
         ).all()
         available_hospitals = db.query(HospitalModel).filter(
             HospitalModel.available_beds > 0
         ).all()
+
+        print(f"DEBUG: Available ambulances: {len(available_ambulances)}")
+        print(f"DEBUG: Available hospitals: {len(available_hospitals)}")
+        print(f"DEBUG: Patient location: {patient_db.latitude}, {patient_db.longitude}")
 
         if not available_ambulances:
             return {"error": "No ambulances available"}
